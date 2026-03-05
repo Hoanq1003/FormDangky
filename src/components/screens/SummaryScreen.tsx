@@ -1,44 +1,60 @@
 'use client';
 
-import { CATEGORY_MAP } from '@/config/categories';
+import { useState } from 'react';
+import { CATEGORY_MAP, CEREMONY_MAP } from '@/config/categories';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Edit3, Trash2, Copy, Plus, ArrowRight, User } from 'lucide-react';
-import type { Applicant, SubmissionItem } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Edit2, Copy, Trash2, Plus, Send, User, Loader2 } from 'lucide-react';
+import type { Applicant, SubmissionItem, CeremonyType } from '@/types';
 
 interface SummaryScreenProps {
+    ceremonyType: CeremonyType;
     applicant: Applicant;
     items: SubmissionItem[];
+    isSubmitting: boolean;
+    submitError: string | null;
     onEditApplicant: () => void;
-    onEditItem: (id: string) => void;
-    onDeleteItem: (id: string) => void;
-    onCloneItem: (id: string) => void;
+    onEditItem: (itemId: string) => void;
+    onDeleteItem: (itemId: string) => void;
+    onCloneItem: (itemId: string) => void;
     onAddMore: () => void;
-    onProceed: () => void;
+    onSubmit: () => void;
+    onBack: () => void;
+}
+
+function getItemDisplayName(item: SubmissionItem): string {
+    const data = item.data as Record<string, unknown>;
+    return (data.hoTenNguoiMat as string) || (data.noiDungDangKy as string) || item.categoryLabel;
+}
+
+function getItemSummary(item: SubmissionItem): string {
+    const data = item.data as Record<string, unknown>;
+    const parts: string[] = [];
+    if (data.ngayMat) parts.push(`Mất: ${data.ngayMat}`);
+    if (data.tho) parts.push(`Thọ: ${data.tho} tuổi`);
+    if (data.anTangTai) parts.push(`An táng: ${data.anTangTai}`);
+    if (data.cungDuongChuThien === 'co') parts.push('Có cúng dường chư Thiên');
+    if (data.hlGiaTien) parts.push('HL gia tiên');
+    if (data.hlTrenDat) parts.push('HL trên đất');
+    return parts.join(' • ') || '—';
 }
 
 export default function SummaryScreen({
-    applicant,
-    items,
-    onEditApplicant,
-    onEditItem,
-    onDeleteItem,
-    onCloneItem,
-    onAddMore,
-    onProceed,
+    ceremonyType, applicant, items, isSubmitting, submitError,
+    onEditApplicant, onEditItem, onDeleteItem, onCloneItem, onAddMore, onSubmit, onBack,
 }: SummaryScreenProps) {
-    const getItemPreview = (item: SubmissionItem): string => {
-        const data = item.data as Record<string, string>;
-        return data.deceasedName || data.subjectName || data.newRequest || data.requestContent || 'Mục đã thêm';
-    };
+    const [confirmed, setConfirmed] = useState(false);
+    const ceremony = CEREMONY_MAP.get(ceremonyType);
 
     return (
         <div className="animate-slide-in">
             <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
-                    <span className="text-xl">📝</span>
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-xl">
+                    📝
                 </div>
                 <div>
                     <h2 className="text-xl font-bold text-stone-800">Xem lại đăng ký</h2>
@@ -46,129 +62,140 @@ export default function SummaryScreen({
                 </div>
             </div>
 
-            {/* Applicant info */}
+            {/* Ceremony type */}
             <Card className="mb-4">
                 <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-amber-600" />
-                            <h3 className="font-semibold text-stone-800 text-sm">Thông tin chung</h3>
-                        </div>
-                        <Button size="sm" variant="ghost" onClick={onEditApplicant} className="h-8 px-2 text-xs">
-                            <Edit3 className="w-3.5 h-3.5 mr-1" /> Sửa
-                        </Button>
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg">{ceremony?.icon}</span>
+                        <span className="font-medium text-stone-800">{ceremony?.label}</span>
                     </div>
-                    <div className="grid grid-cols-1 gap-1 text-sm">
-                        <div className="flex">
-                            <span className="text-stone-500 w-24 flex-shrink-0">Họ tên:</span>
-                            <span className="text-stone-800 font-medium">{applicant.applicantName}</span>
-                        </div>
-                        <div className="flex">
-                            <span className="text-stone-500 w-24 flex-shrink-0">SĐT:</span>
-                            <span className="text-stone-800">{applicant.phone}</span>
-                        </div>
-                        {applicant.zalo && (
-                            <div className="flex">
-                                <span className="text-stone-500 w-24 flex-shrink-0">Zalo:</span>
-                                <span className="text-stone-800">{applicant.zalo}</span>
-                            </div>
-                        )}
-                        {applicant.address && (
-                            <div className="flex">
-                                <span className="text-stone-500 w-24 flex-shrink-0">Địa chỉ:</span>
-                                <span className="text-stone-800">{applicant.address}</span>
-                            </div>
+                </CardContent>
+            </Card>
+
+            {/* Applicant info */}
+            <Card className="mb-4">
+                <CardHeader className="pb-2 flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-stone-500" />
+                        <CardTitle className="text-sm">Thông tin chung</CardTitle>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={onEditApplicant} className="text-amber-600 h-7 text-xs">
+                        <Edit2 className="w-3 h-3 mr-1" /> Sửa
+                    </Button>
+                </CardHeader>
+                <CardContent className="pt-0">
+                    <div className="grid grid-cols-2 gap-y-1 text-sm">
+                        <span className="text-stone-500">Tín chủ:</span>
+                        <span className="font-medium">{applicant.tinChu}</span>
+                        <span className="text-stone-500">SĐT:</span>
+                        <span>{applicant.phone}</span>
+                        {applicant.daoTrang && (
+                            <>
+                                <span className="text-stone-500">Đạo tràng:</span>
+                                <span>{applicant.daoTrang}</span>
+                            </>
                         )}
                         {applicant.notes && (
-                            <div className="flex">
-                                <span className="text-stone-500 w-24 flex-shrink-0">Ghi chú:</span>
-                                <span className="text-stone-800">{applicant.notes}</span>
-                            </div>
+                            <>
+                                <span className="text-stone-500">Ghi chú:</span>
+                                <span>{applicant.notes}</span>
+                            </>
                         )}
                     </div>
                 </CardContent>
             </Card>
 
-            <Separator className="my-4" />
+            <Separator className="mb-4" />
 
             {/* Items list */}
             <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-stone-800 text-sm">
+                <h3 className="font-semibold text-stone-800">
                     Danh sách mục đăng ký ({items.length})
                 </h3>
-                <Button size="sm" variant="outline" onClick={onAddMore} className="h-8 px-3 text-xs gap-1">
-                    <Plus className="w-3.5 h-3.5" /> Thêm mục
+                <Button variant="outline" size="sm" onClick={onAddMore} className="h-7 text-xs gap-1">
+                    <Plus className="w-3 h-3" /> Thêm mục
                 </Button>
             </div>
 
-            {items.length === 0 ? (
-                <Card className="border-dashed">
-                    <CardContent className="p-8 text-center">
-                        <p className="text-stone-400 text-sm">Chưa có mục nào. Hãy thêm ít nhất 1 mục.</p>
-                        <Button variant="outline" onClick={onAddMore} className="mt-3 gap-2">
-                            <Plus className="w-4 h-4" /> Thêm mục đăng ký
-                        </Button>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="space-y-3">
-                    {items.map((item, idx) => {
-                        const cat = CATEGORY_MAP[item.categoryKey];
-                        return (
-                            <Card key={item.id} className="group">
-                                <CardContent className="p-4">
-                                    <div className="flex items-start gap-3">
-                                        <span className="text-xl mt-0.5">{cat?.icon || '📄'}</span>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <Badge variant="default" className="text-[10px]">Mục {idx + 1}</Badge>
-                                                <span className="text-xs text-stone-500">{cat?.label || item.categoryLabel}</span>
-                                            </div>
-                                            <p className="text-sm font-medium text-stone-800 truncate">
-                                                {getItemPreview(item)}
-                                            </p>
+            <div className="space-y-3 mb-6">
+                {items.map((item, idx) => {
+                    const cat = CATEGORY_MAP.get(item.categoryKey);
+                    return (
+                        <Card key={item.id}>
+                            <CardContent className="p-4">
+                                <div className="flex items-start gap-3 mb-2">
+                                    <span className="text-lg">{cat?.icon}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="default" className="text-[10px]">
+                                                Mục {idx + 1}
+                                            </Badge>
+                                            <span className="text-xs text-stone-400">{cat?.shortLabel}</span>
                                         </div>
+                                        <p className="font-medium text-stone-800 text-sm mt-1">
+                                            {getItemDisplayName(item)}
+                                        </p>
+                                        <p className="text-xs text-stone-500 mt-0.5">
+                                            {getItemSummary(item)}
+                                        </p>
                                     </div>
+                                </div>
+                                <div className="flex gap-2 pt-2 border-t border-stone-100">
+                                    <Button variant="ghost" size="sm" onClick={() => onEditItem(item.id)} className="text-amber-600 h-7 text-xs">
+                                        <Edit2 className="w-3 h-3 mr-1" /> Sửa
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => onCloneItem(item.id)} className="text-blue-600 h-7 text-xs">
+                                        <Copy className="w-3 h-3 mr-1" /> Nhân bản
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => onDeleteItem(item.id)} className="text-red-500 h-7 text-xs">
+                                        <Trash2 className="w-3 h-3 mr-1" /> Xoá
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+            </div>
 
-                                    {/* Action buttons */}
-                                    <div className="flex gap-2 mt-3 pt-3 border-t border-stone-100">
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => onEditItem(item.id)}
-                                            className="flex-1 h-8 text-xs gap-1"
-                                        >
-                                            <Edit3 className="w-3.5 h-3.5" /> Sửa
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => onCloneItem(item.id)}
-                                            className="flex-1 h-8 text-xs gap-1"
-                                        >
-                                            <Copy className="w-3.5 h-3.5" /> Nhân bản
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            onClick={() => onDeleteItem(item.id)}
-                                            className="flex-1 h-8 text-xs gap-1 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" /> Xoá
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+            {/* Confirm and submit */}
+            <Card className="mb-4">
+                <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                        <Checkbox
+                            id="confirm"
+                            checked={confirmed}
+                            onCheckedChange={(v) => setConfirmed(v as boolean)}
+                        />
+                        <Label htmlFor="confirm" className="text-sm text-stone-600 leading-snug cursor-pointer">
+                            Tôi đã kiểm tra lại toàn bộ thông tin và xác nhận gửi đăng ký.
+                        </Label>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {submitError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-red-600">{submitError}</p>
                 </div>
             )}
 
-            {items.length > 0 && (
-                <Button onClick={onProceed} className="w-full mt-6 gap-2" size="lg">
-                    Tiếp tục xác nhận <ArrowRight className="w-4 h-4" />
+            <div className="flex gap-3">
+                <Button type="button" variant="outline" onClick={onBack} className="flex-1">
+                    Quay lại
                 </Button>
-            )}
+                <Button
+                    onClick={onSubmit}
+                    disabled={!confirmed || isSubmitting || items.length === 0}
+                    className="flex-1 gap-2"
+                >
+                    {isSubmitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Send className="w-4 h-4" />
+                    )}
+                    {isSubmitting ? 'Đang gửi...' : 'Gửi đăng ký'}
+                </Button>
+            </div>
         </div>
     );
 }

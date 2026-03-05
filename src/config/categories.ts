@@ -1,209 +1,215 @@
-import type { CategoryDefinition, CategoryKey, HelperQuestion } from '@/types';
+import type { CategoryDefinition, CeremonyDefinition } from '@/types';
 
 // ============================================================
-// Category Registry — edit this to change categories & fields
+// Ceremony Types (Loại cầu siêu)
+// ============================================================
+
+export const CEREMONY_TYPES: CeremonyDefinition[] = [
+    {
+        key: 'trai_tang',
+        label: 'Cầu siêu trai Tăng',
+        shortLabel: 'Trai Tăng',
+        icon: '🙏',
+        description: 'Cầu siêu trai Tăng — có Chư Tăng bạch lễ',
+    },
+    {
+        key: 'trai_vien',
+        label: 'Cầu siêu trai Viên',
+        shortLabel: 'Trai Viên',
+        icon: '📿',
+        description: 'Cầu siêu trai Viên',
+    },
+    {
+        key: 'tuy_duyen',
+        label: 'Cầu siêu cúng dường tùy duyên',
+        shortLabel: 'Tùy duyên',
+        icon: '🪷',
+        description: 'Cầu siêu cúng dường tùy duyên',
+    },
+];
+
+export const CEREMONY_MAP = new Map(CEREMONY_TYPES.map((c) => [c.key, c]));
+
+// ============================================================
+// Registration Item Categories
 // ============================================================
 
 export const CATEGORIES: CategoryDefinition[] = [
     {
         key: 'hl_trong_49_ngay',
-        label: 'Đăng ký mục HL còn trong 49 ngày',
-        helperText: 'Dành cho hương linh mới qua đời, còn trong giai đoạn 49 ngày.',
-        chooseIfText: 'Chọn mục này nếu người thân mới mất chưa quá 49 ngày.',
-        exampleText: 'Ví dụ: Đăng ký tụng kinh cho ông/bà vừa mất tuần trước.',
+        label: 'Hương linh mới mất (trong 49 ngày)',
+        shortLabel: 'HL trong 49 ngày',
         icon: '🕯️',
+        helperText: 'Dành cho hương linh mới qua đời, còn trong giai đoạn 49 ngày.',
         fields: [
-            { name: 'deceasedName', label: 'Tên hương linh', type: 'text', required: true, placeholder: 'Nhập tên hương linh' },
-            { name: 'deceasedAltName', label: 'Tên khác / Pháp danh', type: 'text', required: false, placeholder: 'Nếu có' },
-            { name: 'dateOfPassing', label: 'Ngày mất', type: 'date', required: false },
-            { name: 'daysSincePassingEstimate', label: 'Ước tính số ngày từ khi mất', type: 'text', required: false, placeholder: 'VD: khoảng 20 ngày' },
-            { name: 'relationship', label: 'Quan hệ với người đăng ký', type: 'text', required: false, placeholder: 'VD: con, cháu, vợ/chồng...' },
-            { name: 'requestDetails', label: 'Nội dung đăng ký / Ghi chú', type: 'textarea', required: false, placeholder: 'Ghi chi tiết yêu cầu nếu có' },
+            {
+                name: 'hoTenNguoiMat',
+                label: 'Họ tên người mất',
+                type: 'text',
+                required: true,
+                placeholder: 'Nhập họ tên đầy đủ',
+            },
+            {
+                name: 'ngayMat',
+                label: 'Mất ngày (ghi ngày âm lịch)',
+                type: 'text',
+                required: false,
+                placeholder: 'VD: 15/3/Giáp Thìn',
+            },
+            {
+                name: 'tho',
+                label: 'Thọ (tuổi)',
+                type: 'text',
+                required: false,
+                placeholder: 'VD: 78',
+            },
+            {
+                name: 'anTangTai',
+                label: 'An táng tại',
+                type: 'text',
+                required: false,
+                placeholder: 'Địa điểm an táng',
+            },
         ],
         defaultValues: {
-            deceasedName: '',
-            deceasedAltName: '',
-            dateOfPassing: '',
-            daysSincePassingEstimate: '',
-            relationship: '',
-            requestDetails: '',
+            hoTenNguoiMat: '',
+            ngayMat: '',
+            tho: '',
+            anTangTai: '',
         },
     },
     {
         key: 'hl_ngoai_49_ro_ten',
-        label: 'Có rõ tên hương linh HL ngoài 49 ngày',
+        label: 'Hương linh ngoài 49 ngày (rõ tên)',
+        shortLabel: 'HL ngoài 49 ngày',
+        icon: '🪔',
         helperText: 'Dành cho hương linh đã quá 49 ngày, biết rõ tên.',
-        chooseIfText: 'Chọn mục này nếu người thân đã mất trên 49 ngày và bạn biết rõ tên.',
-        exampleText: 'Ví dụ: Đăng ký cho ông nội đã mất cách đây 3 năm.',
-        icon: '📿',
         fields: [
-            { name: 'deceasedName', label: 'Tên hương linh', type: 'text', required: true, placeholder: 'Nhập tên hương linh' },
-            { name: 'deceasedAltName', label: 'Tên khác / Pháp danh', type: 'text', required: false, placeholder: 'Nếu có' },
-            { name: 'yearOfPassing', label: 'Năm mất', type: 'text', required: false, placeholder: 'VD: 2020' },
-            { name: 'relationship', label: 'Quan hệ với người đăng ký', type: 'text', required: false, placeholder: 'VD: con, cháu, vợ/chồng...' },
-            { name: 'requestDetails', label: 'Nội dung đăng ký / Ghi chú', type: 'textarea', required: false, placeholder: 'Ghi chi tiết yêu cầu nếu có' },
+            {
+                name: 'hoTenNguoiMat',
+                label: 'Họ tên người mất',
+                type: 'text',
+                required: true,
+                placeholder: 'Nhập họ tên đầy đủ',
+            },
+            {
+                name: 'ngayMat',
+                label: 'Mất ngày (ghi ngày âm lịch)',
+                type: 'text',
+                required: false,
+                placeholder: 'VD: 10/8/Quý Mão',
+            },
+            {
+                name: 'tho',
+                label: 'Thọ (tuổi)',
+                type: 'text',
+                required: false,
+                placeholder: 'VD: 85',
+            },
+            {
+                name: 'anTangTai',
+                label: 'An táng tại',
+                type: 'text',
+                required: false,
+                placeholder: 'Địa điểm an táng',
+            },
         ],
         defaultValues: {
-            deceasedName: '',
-            deceasedAltName: '',
-            yearOfPassing: '',
-            relationship: '',
-            requestDetails: '',
+            hoTenNguoiMat: '',
+            ngayMat: '',
+            tho: '',
+            anTangTai: '',
         },
     },
     {
         key: 'tam_linh_bai_8',
         label: 'Các mục tâm linh bài số 8',
-        helperText: 'Dành cho các mục đăng ký liên quan đến tâm linh theo bài số 8.',
-        chooseIfText: 'Chọn mục này nếu bạn muốn đăng ký các mục tâm linh tu theo bài số 8.',
-        exampleText: 'Ví dụ: Đăng ký tu tập bài số 8 cho bản thân hoặc người thân.',
-        icon: '🙏',
+        shortLabel: 'Tâm linh bài 8',
+        icon: '📜',
+        helperText: 'Các mục tâm linh theo bài số 8.',
+        noteText: 'Lưu ý: Không ghi các mục hương linh có oán kết chung, riêng như viết mục HL bạch chư Tăng.',
         fields: [
-            { name: 'subjectName', label: 'Tên đối tượng đăng ký', type: 'text', required: true, placeholder: 'Nhập họ tên' },
-            { name: 'subjectType', label: 'Loại đối tượng', type: 'text', required: false, placeholder: 'VD: Bản thân, người thân, ...' },
-            { name: 'requestContent', label: 'Nội dung đăng ký', type: 'textarea', required: true, placeholder: 'Mô tả nội dung cần đăng ký' },
-            { name: 'relatedNotes', label: 'Ghi chú thêm', type: 'textarea', required: false, placeholder: 'Thông tin bổ sung nếu có' },
+            {
+                name: 'cungDuongChuThien',
+                label: 'Cúng dường hồi hướng cho chư Thiên, chư Thần Linh, chư linh thần hộ trì',
+                type: 'radio',
+                required: false,
+                helperText: 'Với PT đang/đã bạch bài phát nguyện 49 ngày: Chư Thiên, chư Thần Linh, chư linh thần hộ trì. Với PT chưa bạch: Chư Thiên, chư Thần Linh.',
+                options: [
+                    { value: 'co', label: 'Có' },
+                    { value: 'khong', label: 'Không' },
+                ],
+            },
+            {
+                name: 'hlGiaTien',
+                label: 'HL gia tiên hợp duyên đã bạch thỉnh',
+                type: 'checkbox',
+                required: false,
+            },
+            {
+                name: 'hlTrenDat',
+                label: 'HL trên đất hợp duyên đã bạch thỉnh',
+                type: 'checkbox',
+                required: false,
+            },
+            {
+                name: 'hlTrenNghiep',
+                label: 'HL trên nghiệp',
+                type: 'textarea',
+                required: false,
+                placeholder: 'Ghi chi tiết nếu có...',
+            },
+            {
+                name: 'hlCanTroChuaBenh',
+                label: 'HL có thể tác động cản trở việc chữa bệnh',
+                type: 'textarea',
+                required: false,
+                placeholder: 'Ghi chi tiết nếu có...',
+            },
+            {
+                name: 'ghiChu',
+                label: 'Ghi chú thêm',
+                type: 'textarea',
+                required: false,
+                placeholder: 'Ghi chú nếu có...',
+            },
         ],
         defaultValues: {
-            subjectName: '',
-            subjectType: '',
-            requestContent: '',
-            relatedNotes: '',
+            cungDuongChuThien: 'khong',
+            hlGiaTien: false,
+            hlTrenDat: false,
+            hlTrenNghiep: '',
+            hlCanTroChuaBenh: '',
+            ghiChu: '',
         },
     },
     {
         key: 'tam_linh_khac',
-        label: 'Các mục tâm linh khác không tu bài số 8',
+        label: 'Các mục tâm linh khác (không tu bài số 8)',
+        shortLabel: 'Tâm linh khác',
+        icon: '🔮',
         helperText: 'Dành cho các mục tâm linh khác, không theo bài số 8.',
-        chooseIfText: 'Chọn mục này nếu bạn muốn đăng ký tâm linh nhưng không phải bài số 8.',
-        exampleText: 'Ví dụ: Đăng ký cầu an, cầu siêu, hoặc các hình thức tâm linh khác.',
-        icon: '☸️',
         fields: [
-            { name: 'subjectName', label: 'Tên đối tượng đăng ký', type: 'text', required: true, placeholder: 'Nhập họ tên' },
-            { name: 'requestContent', label: 'Nội dung đăng ký', type: 'textarea', required: true, placeholder: 'Mô tả nội dung cần đăng ký' },
-            { name: 'categorySubType', label: 'Phân loại thêm', type: 'text', required: false, placeholder: 'VD: Cầu an, cầu siêu...' },
-            { name: 'relatedNotes', label: 'Ghi chú thêm', type: 'textarea', required: false, placeholder: 'Thông tin bổ sung nếu có' },
+            {
+                name: 'noiDungDangKy',
+                label: 'Nội dung đăng ký',
+                type: 'textarea',
+                required: true,
+                placeholder: 'Mô tả chi tiết nội dung cần đăng ký...',
+            },
+            {
+                name: 'ghiChu',
+                label: 'Ghi chú thêm',
+                type: 'textarea',
+                required: false,
+                placeholder: 'Ghi chú nếu có...',
+            },
         ],
         defaultValues: {
-            subjectName: '',
-            requestContent: '',
-            categorySubType: '',
-            relatedNotes: '',
-        },
-    },
-    {
-        key: 'dang_ky_lai_dot_truoc',
-        label: 'Đăng ký lại các mục của đợt trước',
-        helperText: 'Dành cho người đã đăng ký trước đó và muốn đăng ký lại hoặc cập nhật.',
-        chooseIfText: 'Chọn mục này nếu bạn đã từng đăng ký trước đây và muốn đăng ký lại.',
-        exampleText: 'Ví dụ: Đăng ký lại mục đã đăng ký đợt tháng trước.',
-        icon: '🔄',
-        fields: [
-            { name: 'previousSubmissionCode', label: 'Mã đăng ký cũ', type: 'text', required: false, placeholder: 'VD: DK-20260201-AB12' },
-            { name: 'previousPeriod', label: 'Đợt trước / Thời điểm trước', type: 'text', required: false, placeholder: 'VD: Tháng 2/2026' },
-            { name: 'oldContentSummary', label: 'Nội dung cũ', type: 'textarea', required: false, placeholder: 'Tóm tắt nội dung đã đăng ký lần trước' },
-            { name: 'newRequest', label: 'Yêu cầu mới / Cập nhật', type: 'textarea', required: true, placeholder: 'Nhập yêu cầu mới hoặc nội dung cần cập nhật' },
-            { name: 'relatedNotes', label: 'Ghi chú thêm', type: 'textarea', required: false, placeholder: 'Thông tin bổ sung nếu có' },
-        ],
-        defaultValues: {
-            previousSubmissionCode: '',
-            previousPeriod: '',
-            oldContentSummary: '',
-            newRequest: '',
-            relatedNotes: '',
+            noiDungDangKy: '',
+            ghiChu: '',
         },
     },
 ];
 
-// Quick lookup map
-export const CATEGORY_MAP: Record<CategoryKey, CategoryDefinition> =
-    CATEGORIES.reduce((acc, cat) => {
-        acc[cat.key] = cat;
-        return acc;
-    }, {} as Record<CategoryKey, CategoryDefinition>);
-
-// ============================================================
-// Helper Flow Questions
-// ============================================================
-
-export const HELPER_QUESTIONS: HelperQuestion[] = [
-    {
-        id: 'q1',
-        question: 'Bạn muốn đăng ký cho ai?',
-        options: [
-            {
-                value: 'deceased_recent',
-                label: 'Người thân mới qua đời (chưa quá 49 ngày)',
-                points: { hl_trong_49_ngay: 3 },
-            },
-            {
-                value: 'deceased_old',
-                label: 'Người thân đã mất lâu (trên 49 ngày)',
-                points: { hl_ngoai_49_ro_ten: 3 },
-            },
-            {
-                value: 'spiritual',
-                label: 'Đăng ký tu tập / tâm linh',
-                points: { tam_linh_bai_8: 1, tam_linh_khac: 1 },
-            },
-            {
-                value: 're_register',
-                label: 'Đăng ký lại mục đã có từ trước',
-                points: { dang_ky_lai_dot_truoc: 3 },
-            },
-        ],
-    },
-    {
-        id: 'q2',
-        question: 'Bạn có biết rõ tên người/đối tượng cần đăng ký không?',
-        options: [
-            {
-                value: 'yes',
-                label: 'Có, tôi biết rõ tên',
-                points: { hl_trong_49_ngay: 1, hl_ngoai_49_ro_ten: 1, tam_linh_bai_8: 1 },
-            },
-            {
-                value: 'no',
-                label: 'Không chắc / Không rõ tên',
-                points: { tam_linh_khac: 1 },
-            },
-        ],
-    },
-    {
-        id: 'q3',
-        question: 'Nội dung đăng ký có liên quan đến bài số 8 không?',
-        options: [
-            {
-                value: 'yes',
-                label: 'Có liên quan đến bài số 8',
-                points: { tam_linh_bai_8: 3 },
-            },
-            {
-                value: 'no',
-                label: 'Không liên quan / Không biết',
-                points: { tam_linh_khac: 2 },
-            },
-            {
-                value: 'na',
-                label: 'Không phải mục tâm linh',
-                points: { hl_trong_49_ngay: 1, hl_ngoai_49_ro_ten: 1, dang_ky_lai_dot_truoc: 1 },
-            },
-        ],
-    },
-    {
-        id: 'q4',
-        question: 'Bạn đã từng đăng ký ở đợt trước chưa?',
-        options: [
-            {
-                value: 'yes',
-                label: 'Rồi, tôi muốn đăng ký lại',
-                points: { dang_ky_lai_dot_truoc: 3 },
-            },
-            {
-                value: 'no',
-                label: 'Chưa, đây là lần đầu',
-                points: { hl_trong_49_ngay: 1, hl_ngoai_49_ro_ten: 1, tam_linh_bai_8: 1, tam_linh_khac: 1 },
-            },
-        ],
-    },
-];
+export const CATEGORY_MAP = new Map(CATEGORIES.map((c) => [c.key, c]));

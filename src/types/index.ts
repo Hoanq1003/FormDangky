@@ -1,22 +1,34 @@
 // ============================================================
-// Core types for the registration webapp
+// Core types for Buddhist ceremony registration
 // ============================================================
 
-export interface Applicant {
-    applicantName: string;
-    phone: string;
-    zalo?: string;
-    address?: string;
-    notes?: string;
-}
+export type CeremonyType = 'trai_tang' | 'trai_vien' | 'tuy_duyen';
 
 export type CategoryKey =
     | 'hl_trong_49_ngay'
     | 'hl_ngoai_49_ro_ten'
     | 'tam_linh_bai_8'
-    | 'tam_linh_khac'
-    | 'dang_ky_lai_dot_truoc';
+    | 'tam_linh_khac';
 
+export type ScreenName =
+    | 'landing'
+    | 'ceremony_select'
+    | 'applicant'
+    | 'category_select'
+    | 'category_form'
+    | 'post_save'
+    | 'summary'
+    | 'success';
+
+// Applicant = person registering
+export interface Applicant {
+    tinChu: string;        // Tín chủ / Phật tử / Pháp danh
+    phone: string;
+    daoTrang: string;      // Đạo tràng / Nhóm
+    notes: string;
+}
+
+// A single registered item
 export interface SubmissionItem {
     id: string;
     categoryKey: CategoryKey;
@@ -26,68 +38,68 @@ export interface SubmissionItem {
     updatedAt: string;
 }
 
+// Full submission
 export interface Submission {
-    submissionId: string;
-    submissionCode: string;
+    id: string;
+    code: string;
+    ceremonyType: CeremonyType;
+    ceremonyLabel: string;
     applicant: Applicant;
     items: SubmissionItem[];
     createdAt: string;
-    status: string;
-    source: string;
+}
+
+// Category definition for config
+export interface FieldDefinition {
+    name: string;
+    label: string;
+    type: 'text' | 'textarea' | 'select' | 'checkbox' | 'radio';
+    required: boolean;
+    placeholder?: string;
+    helperText?: string;
+    options?: { value: string; label: string }[];
 }
 
 export interface CategoryDefinition {
     key: CategoryKey;
     label: string;
-    helperText: string;
-    chooseIfText: string;
-    exampleText: string;
+    shortLabel: string;
     icon: string;
+    helperText: string;
+    noteText?: string;
     fields: FieldDefinition[];
     defaultValues: Record<string, unknown>;
 }
 
-export interface FieldDefinition {
-    name: string;
+export interface CeremonyDefinition {
+    key: CeremonyType;
     label: string;
-    type: 'text' | 'textarea' | 'date' | 'select';
-    required: boolean;
-    placeholder?: string;
-    options?: { value: string; label: string }[];
+    shortLabel: string;
+    icon: string;
+    description: string;
 }
 
-// Wizard screen names
-export type ScreenName =
-    | 'landing'
-    | 'applicant'
-    | 'categorySelect'
-    | 'categoryForm'
-    | 'postSave'
-    | 'summary'
-    | 'confirm'
-    | 'success'
-    | 'helper';
-
-// Local draft shape
+// Draft state for localStorage
 export interface DraftState {
+    ceremonyType: CeremonyType | null;
     applicant: Applicant | null;
     items: SubmissionItem[];
     currentScreen: ScreenName;
-    selectedCategory: CategoryKey | null;
-    editingItemId: string | null;
+    lastUpdated: string;
 }
 
-// Admin types
+// Google Sheets row types
 export interface SubmissionRow {
     submission_id: string;
     submission_code: string;
     created_at: string;
     updated_at: string;
     status: string;
+    ceremony_type: string;
+    ceremony_label: string;
     applicant_name: string;
     applicant_phone: string;
-    applicant_zalo: string;
-    applicant_address: string;
+    applicant_dao_trang: string;
     total_items: string;
     categories_text: string;
     applicant_payload_json: string;
@@ -109,10 +121,4 @@ export interface SubmissionItemRow {
     reference_value: string;
     item_payload_json: string;
     status: string;
-}
-
-export interface HelperQuestion {
-    id: string;
-    question: string;
-    options: { value: string; label: string; points: Partial<Record<CategoryKey, number>> }[];
 }

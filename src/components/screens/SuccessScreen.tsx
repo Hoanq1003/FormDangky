@@ -1,70 +1,52 @@
 'use client';
 
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { CheckCircle2, Copy, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { CheckCircle, Copy, RefreshCw } from 'lucide-react';
 
 interface SuccessScreenProps {
     submissionCode: string;
-    itemCount: number;
     onNewRegistration: () => void;
 }
 
-export default function SuccessScreen({
-    submissionCode,
-    itemCount,
-    onNewRegistration,
-}: SuccessScreenProps) {
+export default function SuccessScreen({ submissionCode, onNewRegistration }: SuccessScreenProps) {
     const [copied, setCopied] = useState(false);
 
-    const copyCode = async () => {
+    const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(submissionCode);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
-        } catch {
-            // fallback
-        }
+        } catch { /* fallback: do nothing */ }
     };
 
     return (
-        <div className="animate-slide-in text-center">
-            {/* Success animation */}
-            <div className="mb-8">
-                <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center shadow-2xl shadow-emerald-500/30 animate-bounce-in">
-                    <CheckCircle2 className="w-10 h-10 text-white" />
-                </div>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center text-center animate-fade-in">
+            <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mb-6">
+                <CheckCircle className="w-10 h-10 text-emerald-500" />
             </div>
 
-            <h2 className="text-2xl font-bold text-stone-800 mb-2">
-                Đăng ký thành công! 🎉
-            </h2>
-            <p className="text-stone-500 mb-6">
-                Bạn đã đăng ký <strong className="text-amber-600">{itemCount} mục</strong> thành công.
-            </p>
+            <h2 className="text-2xl font-bold text-stone-800 mb-2">Đăng ký thành công!</h2>
+            <p className="text-stone-500 mb-6">Cảm ơn bạn đã đăng ký cầu siêu.</p>
 
-            {/* Submission code */}
-            <Card className="mb-6 border-2 border-emerald-200 bg-emerald-50/50">
-                <CardContent className="p-5">
-                    <p className="text-sm text-stone-500 mb-2">Mã đăng ký của bạn</p>
-                    <div className="flex items-center justify-center gap-3">
-                        <span className="text-2xl font-mono font-bold text-emerald-700 tracking-wider">
-                            {submissionCode}
-                        </span>
-                        <Button size="sm" variant="outline" onClick={copyCode} className="h-8 gap-1">
-                            <Copy className="w-3.5 h-3.5" />
-                            {copied ? 'Đã sao chép' : 'Sao chép'}
-                        </Button>
-                    </div>
-                    <p className="text-xs text-stone-400 mt-2">
-                        Vui lòng lưu lại mã này để tiện tra cứu sau.
-                    </p>
+            <Card className="w-full max-w-sm mb-6">
+                <CardContent className="p-4 text-center">
+                    <p className="text-xs text-stone-400 mb-1">Mã đăng ký của bạn</p>
+                    <p className="text-2xl font-mono font-bold text-amber-600 mb-3">{submissionCode}</p>
+                    <Button variant="outline" size="sm" onClick={handleCopy} className="gap-2">
+                        <Copy className="w-3.5 h-3.5" />
+                        {copied ? 'Đã sao chép!' : 'Sao chép mã'}
+                    </Button>
                 </CardContent>
             </Card>
 
-            <Button onClick={onNewRegistration} variant="outline" className="gap-2">
-                <Plus className="w-4 h-4" /> Tạo đăng ký mới
+            <p className="text-xs text-stone-400 mb-6 max-w-xs">
+                Vui lòng lưu lại mã này để tra cứu sau. Thông tin đăng ký đã được gửi thành công.
+            </p>
+
+            <Button variant="outline" onClick={onNewRegistration} className="gap-2">
+                <RefreshCw className="w-4 h-4" /> Đăng ký mới
             </Button>
         </div>
     );

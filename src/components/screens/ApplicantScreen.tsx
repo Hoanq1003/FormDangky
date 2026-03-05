@@ -22,14 +22,14 @@ export default function ApplicantScreen({ defaultValues, onNext, onBack }: Appli
         register,
         handleSubmit,
         formState: { errors, isValid },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } = useForm<ApplicantFormData>({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(applicantSchema) as any,
         defaultValues: defaultValues || {
-            applicantName: '',
+            tinChu: '',
             phone: '',
-            zalo: '',
-            address: '',
+            daoTrang: '',
             notes: '',
         },
         mode: 'onChange',
@@ -47,7 +47,7 @@ export default function ApplicantScreen({ defaultValues, onNext, onBack }: Appli
                 </div>
                 <div>
                     <h2 className="text-xl font-bold text-stone-800">Thông tin người đăng ký</h2>
-                    <p className="text-sm text-stone-500">Bước 1 — Nhập thông tin chung</p>
+                    <p className="text-sm text-stone-500">Bước 2 — Nhập thông tin Tín chủ</p>
                 </div>
             </div>
 
@@ -58,16 +58,16 @@ export default function ApplicantScreen({ defaultValues, onNext, onBack }: Appli
                 <CardContent>
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="applicantName">
-                                Họ và tên <span className="text-red-500">*</span>
+                            <Label htmlFor="tinChu">
+                                Tín chủ / Phật tử / Pháp danh <span className="text-red-500">*</span>
                             </Label>
                             <Input
-                                id="applicantName"
-                                placeholder="Nhập họ và tên đầy đủ"
-                                {...register('applicantName')}
+                                id="tinChu"
+                                placeholder="Nếu có Pháp danh thì ghi Pháp danh"
+                                {...register('tinChu')}
                             />
-                            {errors.applicantName && (
-                                <p className="text-sm text-red-500">{errors.applicantName.message}</p>
+                            {errors.tinChu && (
+                                <p className="text-sm text-red-500">{errors.tinChu.message}</p>
                             )}
                         </div>
 
@@ -87,20 +87,11 @@ export default function ApplicantScreen({ defaultValues, onNext, onBack }: Appli
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="zalo">Zalo</Label>
+                            <Label htmlFor="daoTrang">Đạo tràng / Nhóm</Label>
                             <Input
-                                id="zalo"
-                                placeholder="Số Zalo (nếu khác SĐT)"
-                                {...register('zalo')}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="address">Địa chỉ</Label>
-                            <Input
-                                id="address"
-                                placeholder="Nhập địa chỉ"
-                                {...register('address')}
+                                id="daoTrang"
+                                placeholder="Tên đạo tràng hoặc nhóm (nếu có)"
+                                {...register('daoTrang')}
                             />
                         </div>
 
@@ -109,7 +100,7 @@ export default function ApplicantScreen({ defaultValues, onNext, onBack }: Appli
                             <Textarea
                                 id="notes"
                                 placeholder="Ghi chú thêm nếu có"
-                                rows={3}
+                                rows={2}
                                 {...register('notes')}
                             />
                         </div>

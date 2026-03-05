@@ -4,27 +4,20 @@ import { CATEGORIES } from '@/config/categories';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { HelpCircle, ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import type { CategoryKey, SubmissionItem } from '@/types';
 
 interface CategorySelectScreenProps {
-    existingItems: SubmissionItem[];
+    items: SubmissionItem[];
     onSelect: (key: CategoryKey) => void;
-    onHelperFlow: () => void;
     onBack: () => void;
 }
 
-export default function CategorySelectScreen({
-    existingItems,
-    onSelect,
-    onHelperFlow,
-    onBack,
-}: CategorySelectScreenProps) {
-    // Count items per category
-    const countMap = existingItems.reduce<Record<string, number>>((acc, item) => {
+export default function CategorySelectScreen({ items, onSelect, onBack }: CategorySelectScreenProps) {
+    const itemCounts = items.reduce((acc, item) => {
         acc[item.categoryKey] = (acc[item.categoryKey] || 0) + 1;
         return acc;
-    }, {});
+    }, {} as Record<string, number>);
 
     return (
         <div className="animate-slide-in">
@@ -34,89 +27,46 @@ export default function CategorySelectScreen({
                 </div>
                 <div>
                     <h2 className="text-xl font-bold text-stone-800">Chọn mục đăng ký</h2>
-                    <p className="text-sm text-stone-500">Bước 2 — Chọn loại mục bạn muốn đăng ký</p>
+                    <p className="text-sm text-stone-500">Bước 3 — Chọn loại mục bạn muốn đăng ký</p>
                 </div>
             </div>
 
-            {existingItems.length > 0 && (
-                <div className="mb-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                    <p className="text-sm text-amber-700">
-                        ✨ Bạn đã thêm <strong>{existingItems.length}</strong> mục.
-                        Chọn thêm mục khác hoặc{' '}
-                        <button
-                            onClick={onBack}
-                            className="text-amber-600 underline font-medium"
+            <div className="space-y-3 mb-6">
+                {CATEGORIES.map((cat) => {
+                    const count = itemCounts[cat.key] || 0;
+                    return (
+                        <Card
+                            key={cat.key}
+                            className="cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
+                            onClick={() => onSelect(cat.key)}
                         >
-                            xem lại danh sách
-                        </button>.
-                    </p>
-                </div>
-            )}
-
-            <div className="space-y-3">
-                {CATEGORIES.map((cat) => (
-                    <Card
-                        key={cat.key}
-                        className="cursor-pointer hover:shadow-md hover:border-amber-200 group transition-all duration-200"
-                        onClick={() => onSelect(cat.key)}
-                    >
-                        <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                                <span className="text-2xl mt-1">{cat.icon}</span>
+                            <CardContent className="p-4 flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-2xl flex-shrink-0">
+                                    {cat.icon}
+                                </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-semibold text-stone-800 text-sm leading-tight">
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-semibold text-stone-800 text-sm">
                                             {cat.label}
                                         </h3>
-                                        {countMap[cat.key] && (
-                                            <Badge variant="default" className="text-[10px] px-1.5 py-0">
-                                                {countMap[cat.key]} đã thêm
+                                        {count > 0 && (
+                                            <Badge variant="default" className="text-[10px]">
+                                                {count} mục
                                             </Badge>
                                         )}
                                     </div>
-                                    <p className="text-xs text-stone-500 mb-1">{cat.helperText}</p>
-                                    <p className="text-xs text-amber-600 font-medium">
-                                        💡 {cat.chooseIfText}
-                                    </p>
-                                    <p className="text-[11px] text-stone-400 mt-1 italic">
-                                        {cat.exampleText}
-                                    </p>
+                                    <p className="text-xs text-stone-500 mt-0.5">{cat.helperText}</p>
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-stone-300 group-hover:text-amber-500 transition-colors mt-2 flex-shrink-0" />
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-
-                {/* Helper flow card */}
-                <Card
-                    className="cursor-pointer hover:shadow-md hover:border-blue-200 group transition-all duration-200 border-dashed"
-                    onClick={onHelperFlow}
-                >
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                                <HelpCircle className="w-5 h-5 text-blue-500" />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-semibold text-blue-700 text-sm">
-                                    Tôi chưa chắc mình thuộc mục nào
-                                </h3>
-                                <p className="text-xs text-stone-500">
-                                    Trả lời vài câu hỏi đơn giản để chúng tôi gợi ý mục phù hợp
-                                </p>
-                            </div>
-                            <ChevronRight className="w-5 h-5 text-stone-300 group-hover:text-blue-500 transition-colors flex-shrink-0" />
-                        </div>
-                    </CardContent>
-                </Card>
+                                <ChevronRight className="w-5 h-5 text-stone-300 flex-shrink-0" />
+                            </CardContent>
+                        </Card>
+                    );
+                })}
             </div>
 
-            <div className="mt-6">
-                <Button variant="outline" onClick={onBack} className="w-full gap-2">
-                    <ArrowLeft className="w-4 h-4" /> Quay lại
-                </Button>
-            </div>
+            <Button type="button" variant="outline" onClick={onBack} className="w-full">
+                <ArrowLeft className="w-4 h-4 mr-1" /> Quay lại
+            </Button>
         </div>
     );
 }

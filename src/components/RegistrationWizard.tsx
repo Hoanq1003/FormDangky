@@ -1,327 +1,279 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { saveDraft, loadDraft, clearDraft } from '@/lib/utils/draft';
+import { CATEGORY_MAP, CEREMONY_MAP } from '@/config/categories';
 import { submitRegistration } from '@/actions/submit';
-import { CATEGORY_MAP } from '@/config/categories';
-import type { Applicant, CategoryKey, SubmissionItem, ScreenName } from '@/types';
+import { saveDraft, loadDraft, clearDraft, hasDraft } from '@/lib/utils/draft';
+import type { Applicant, SubmissionItem, CeremonyType, CategoryKey, ScreenName } from '@/types';
 
 import LandingScreen from '@/components/screens/LandingScreen';
+import CeremonySelectScreen from '@/components/screens/CeremonySelectScreen';
 import ApplicantScreen from '@/components/screens/ApplicantScreen';
 import CategorySelectScreen from '@/components/screens/CategorySelectScreen';
 import CategoryFormScreen from '@/components/screens/CategoryFormScreen';
 import PostSaveScreen from '@/components/screens/PostSaveScreen';
 import SummaryScreen from '@/components/screens/SummaryScreen';
-import ConfirmScreen from '@/components/screens/ConfirmScreen';
 import SuccessScreen from '@/components/screens/SuccessScreen';
-import HelperScreen from '@/components/screens/HelperScreen';
+import { Badge } from '@/components/ui/badge';
 
 export default function RegistrationWizard() {
     const [screen, setScreen] = useState<ScreenName>('landing');
+    const [ceremonyType, setCeremonyType] = useState<CeremonyType | null>(null);
     const [applicant, setApplicant] = useState<Applicant | null>(null);
     const [items, setItems] = useState<SubmissionItem[]>([]);
     const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
-    const [editingItemId, setEditingItemId] = useState<string | null>(null);
+    const [editingItem, setEditingItem] = useState<SubmissionItem | null>(null);
+    const [submissionCode, setSubmissionCode] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
-    const [submissionCode, setSubmissionCode] = useState<string>('');
-    const [hasDraftLoaded, setHasDraftLoaded] = useState(false);
+    const [draftLoaded, setDraftLoaded] = useState(false);
 
     // Load draft on mount
     useEffect(() => {
-        const draft = loadDraft();
-        if (draft) {
-            if (draft.applicant) setApplicant(draft.applicant);
-            if (draft.items?.length) setItems(draft.items);
-            // If there was an in-progress draft, resume at the right screen
-            if (draft.applicant && draft.items?.length > 0) {
-                setScreen('summary');
-            } else if (draft.applicant) {
-                setScreen('categorySelect');
+        if (typeof window !== 'undefined' && hasDraft()) {
+            const draft = loadDraft();
+            if (draft) {
+                setCeremonyType(draft.ceremonyType);
+                setApplicant(draft.applicant);
+                setItems(draft.items || []);
+                setScreen(draft.currentScreen || 'landing');
+                setDraftLoaded(true);
             }
-            setHasDraftLoaded(true);
         }
     }, []);
 
-    // Auto-save draft on state changes
+    // Auto-save draft
     const persistDraft = useCallback(() => {
         saveDraft({
+            ceremonyType,
             applicant,
             items,
             currentScreen: screen,
-            selectedCategory,
-            editingItemId,
+            lastUpdated: new Date().toISOString(),
         });
-    }, [applicant, items, screen, selectedCategory, editingItemId]);
+    }, [ceremonyType, applicant, items, screen]);
 
     useEffect(() => {
         if (screen !== 'landing' && screen !== 'success') {
             persistDraft();
         }
-    }, [persistDraft, screen]);
+    }, [screen, ceremonyType, applicant, items, persistDraft]);
 
-    // Warn before leaving with unsaved data
+    // Dismiss draft banner
     useEffect(() => {
-        const handler = (e: BeforeUnloadEvent) => {
-            if (items.length > 0 && screen !== 'success') {
-                e.preventDefault();
-            }
-        };
-        window.addEventListener('beforeunload', handler);
-        return () => window.removeEventListener('beforeunload', handler);
-    }, [items, screen]);
+        if (draftLoaded) {
+            const timer = setTimeout(() => setDraftLoaded(false), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [draftLoaded]);
 
-    // === Screen handlers ===
+    // Navigation
+    const goTo = (s: ScreenName) => setScreen(s);
 
-    const handleStart = () => setScreen('applicant');
+    // Ceremony select
+    const handleCeremonySelect = (type: CeremonyType) => {
+        setCeremonyType(type);
+        goTo('applicant');
+    };
 
+    // Applicant submit
     const handleApplicantNext = (data: Applicant) => {
         setApplicant(data);
-        setScreen('categorySelect');
+        goTo('category_select');
     };
 
+    // Category selection
     const handleCategorySelect = (key: CategoryKey) => {
         setSelectedCategory(key);
-        setEditingItemId(null);
-        setScreen('categoryForm');
+        setEditingItem(null);
+        goTo('category_form');
     };
 
-    const handleHelperFlow = () => setScreen('helper');
-
-    const handleFormSave = (data: Record<string, unknown>) => {
+    // Save item
+    const handleSaveItem = (data: Record<string, unknown>) => {
+        if (!selectedCategory) return;
+        const cat = CATEGORY_MAP.get(selectedCategory);
         const now = new Date().toISOString();
-        const cat = CATEGORY_MAP[selectedCategory!];
 
-        if (editingItemId) {
-            // Editing existing item
+        if (editingItem) {
             setItems((prev) =>
                 prev.map((item) =>
-                    item.id === editingItemId
+                    item.id === editingItem.id
                         ? { ...item, data, updatedAt: now }
                         : item
                 )
             );
         } else {
-            // New item
             const newItem: SubmissionItem = {
                 id: uuidv4(),
-                categoryKey: selectedCategory!,
-                categoryLabel: cat.label,
+                categoryKey: selectedCategory,
+                categoryLabel: cat?.label || '',
                 data,
                 createdAt: now,
                 updatedAt: now,
             };
             setItems((prev) => [...prev, newItem]);
         }
-
-        setEditingItemId(null);
-        setScreen('postSave');
+        setEditingItem(null);
+        goTo('post_save');
     };
 
-    const handleFormCancel = () => {
-        setEditingItemId(null);
-        if (items.length > 0) {
-            setScreen('summary');
-        } else {
-            setScreen('categorySelect');
-        }
-    };
-
-    const handleAddAnother = () => {
-        setSelectedCategory(null);
-        setEditingItemId(null);
-        setScreen('categorySelect');
-    };
-
-    const handleReview = () => setScreen('summary');
-
-    const handleEditApplicant = () => setScreen('applicant');
-
-    const handleEditItem = (id: string) => {
-        const item = items.find((i) => i.id === id);
+    // Edit item
+    const handleEditItem = (itemId: string) => {
+        const item = items.find((i) => i.id === itemId);
         if (item) {
             setSelectedCategory(item.categoryKey);
-            setEditingItemId(id);
-            setScreen('categoryForm');
+            setEditingItem(item);
+            goTo('category_form');
         }
     };
 
-    const handleDeleteItem = (id: string) => {
-        setItems((prev) => prev.filter((i) => i.id !== id));
+    // Delete item
+    const handleDeleteItem = (itemId: string) => {
+        setItems((prev) => prev.filter((i) => i.id !== itemId));
     };
 
-    const handleCloneItem = (id: string) => {
-        const item = items.find((i) => i.id === id);
+    // Clone item
+    const handleCloneItem = (itemId: string) => {
+        const item = items.find((i) => i.id === itemId);
         if (item) {
-            const now = new Date().toISOString();
-            const clone: SubmissionItem = {
+            const cloned: SubmissionItem = {
                 ...item,
                 id: uuidv4(),
-                createdAt: now,
-                updatedAt: now,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
             };
-            setItems((prev) => [...prev, clone]);
+            setItems((prev) => [...prev, cloned]);
         }
     };
 
-    const handleProceedToConfirm = () => setScreen('confirm');
-
+    // Submit
     const handleSubmit = async () => {
-        if (!applicant || items.length === 0) return;
+        if (!applicant || !ceremonyType || items.length === 0) return;
 
         setIsSubmitting(true);
         setSubmitError(null);
 
         try {
-            const result = await submitRegistration({ applicant, items });
-            if (result.success && result.submissionCode) {
-                setSubmissionCode(result.submissionCode);
+            const result = await submitRegistration({
+                ceremonyType,
+                applicant,
+                items,
+            });
+
+            if (result.success && result.code) {
+                setSubmissionCode(result.code);
                 clearDraft();
-                setScreen('success');
+                goTo('success');
             } else {
-                setSubmitError(result.error || 'Đã xảy ra lỗi không xác định.');
+                setSubmitError(result.error || 'Đã có lỗi xảy ra. Vui lòng thử lại.');
             }
         } catch {
-            setSubmitError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+            setSubmitError('Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    // New registration
     const handleNewRegistration = () => {
+        setCeremonyType(null);
         setApplicant(null);
         setItems([]);
-        setSelectedCategory(null);
-        setEditingItemId(null);
         setSubmissionCode('');
-        setSubmitError(null);
         clearDraft();
-        setScreen('landing');
-    };
-
-    // === Render ===
-
-    const renderScreen = () => {
-        switch (screen) {
-            case 'landing':
-                return <LandingScreen onStart={handleStart} />;
-
-            case 'applicant':
-                return (
-                    <ApplicantScreen
-                        defaultValues={applicant}
-                        onNext={handleApplicantNext}
-                        onBack={() => setScreen(items.length > 0 ? 'summary' : 'landing')}
-                    />
-                );
-
-            case 'categorySelect':
-                return (
-                    <CategorySelectScreen
-                        existingItems={items}
-                        onSelect={handleCategorySelect}
-                        onHelperFlow={handleHelperFlow}
-                        onBack={() => items.length > 0 ? setScreen('summary') : setScreen('applicant')}
-                    />
-                );
-
-            case 'categoryForm':
-                if (!selectedCategory) return null;
-                const editingItem = editingItemId
-                    ? items.find((i) => i.id === editingItemId)
-                    : null;
-                return (
-                    <CategoryFormScreen
-                        categoryKey={selectedCategory}
-                        defaultValues={editingItem?.data}
-                        onSave={handleFormSave}
-                        onCancel={handleFormCancel}
-                    />
-                );
-
-            case 'postSave':
-                return (
-                    <PostSaveScreen
-                        itemCount={items.length}
-                        onAddAnother={handleAddAnother}
-                        onReview={handleReview}
-                        onFinish={() => setScreen('summary')}
-                    />
-                );
-
-            case 'summary':
-                return (
-                    <SummaryScreen
-                        applicant={applicant!}
-                        items={items}
-                        onEditApplicant={handleEditApplicant}
-                        onEditItem={handleEditItem}
-                        onDeleteItem={handleDeleteItem}
-                        onCloneItem={handleCloneItem}
-                        onAddMore={handleAddAnother}
-                        onProceed={handleProceedToConfirm}
-                    />
-                );
-
-            case 'confirm':
-                return (
-                    <ConfirmScreen
-                        itemCount={items.length}
-                        isSubmitting={isSubmitting}
-                        error={submitError}
-                        onSubmit={handleSubmit}
-                        onBack={() => setScreen('summary')}
-                    />
-                );
-
-            case 'success':
-                return (
-                    <SuccessScreen
-                        submissionCode={submissionCode}
-                        itemCount={items.length}
-                        onNewRegistration={handleNewRegistration}
-                    />
-                );
-
-            case 'helper':
-                return (
-                    <HelperScreen
-                        onSelectCategory={(key) => {
-                            setSelectedCategory(key);
-                            setScreen('categoryForm');
-                        }}
-                        onBackToManual={() => setScreen('categorySelect')}
-                    />
-                );
-
-            default:
-                return null;
-        }
+        goTo('landing');
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+        <div className="min-h-screen bg-gradient-to-br from-amber-50/80 via-stone-50 to-blue-50/30">
             {/* Header */}
             {screen !== 'landing' && screen !== 'success' && (
-                <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-amber-100 px-4 py-3">
+                <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-sm border-b border-stone-200 px-4 py-3">
                     <div className="max-w-lg mx-auto flex items-center justify-between">
-                        <h1 className="text-sm font-bold text-amber-700">
-                            {process.env.NEXT_PUBLIC_APP_NAME || 'Đăng Ký'}
-                        </h1>
+                        <h1 className="text-sm font-bold text-amber-600">Đăng Ký Cầu Siêu</h1>
                         {items.length > 0 && (
-                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-                                {items.length} mục
-                            </span>
+                            <Badge variant="default" className="text-xs">{items.length} mục</Badge>
                         )}
                     </div>
-                </header>
+                </div>
             )}
 
-            {/* Content */}
-            <main className="max-w-lg mx-auto px-4 py-6 pb-20">
-                {renderScreen()}
-            </main>
+            <div className="max-w-lg mx-auto px-4 py-6">
+                {/* Draft loaded banner */}
+                {draftLoaded && screen !== 'landing' && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-700 rounded-lg px-3 py-2 text-xs mb-4 animate-fade-in">
+                        ✨ Đã khôi phục bản nháp trước đó
+                    </div>
+                )}
+
+                {/* Screens */}
+                {screen === 'landing' && (
+                    <LandingScreen onStart={() => goTo('ceremony_select')} />
+                )}
+                {screen === 'ceremony_select' && (
+                    <CeremonySelectScreen
+                        selected={ceremonyType}
+                        onSelect={handleCeremonySelect}
+                        onBack={() => goTo('landing')}
+                    />
+                )}
+                {screen === 'applicant' && (
+                    <ApplicantScreen
+                        defaultValues={applicant}
+                        onNext={handleApplicantNext}
+                        onBack={() => goTo('ceremony_select')}
+                    />
+                )}
+                {screen === 'category_select' && (
+                    <CategorySelectScreen
+                        items={items}
+                        onSelect={handleCategorySelect}
+                        onBack={() => goTo('applicant')}
+                    />
+                )}
+                {screen === 'category_form' && selectedCategory && (
+                    <CategoryFormScreen
+                        categoryKey={selectedCategory}
+                        editingItem={editingItem}
+                        onSave={handleSaveItem}
+                        onBack={() => {
+                            setEditingItem(null);
+                            goTo(items.length > 0 ? 'summary' : 'category_select');
+                        }}
+                    />
+                )}
+                {screen === 'post_save' && (
+                    <PostSaveScreen
+                        itemCount={items.length}
+                        onAddAnother={() => goTo('category_select')}
+                        onReviewAndSubmit={() => goTo('summary')}
+                    />
+                )}
+                {screen === 'summary' && applicant && ceremonyType && (
+                    <SummaryScreen
+                        ceremonyType={ceremonyType}
+                        applicant={applicant}
+                        items={items}
+                        isSubmitting={isSubmitting}
+                        submitError={submitError}
+                        onEditApplicant={() => goTo('applicant')}
+                        onEditItem={handleEditItem}
+                        onDeleteItem={handleDeleteItem}
+                        onCloneItem={handleCloneItem}
+                        onAddMore={() => goTo('category_select')}
+                        onSubmit={handleSubmit}
+                        onBack={() => goTo('category_select')}
+                    />
+                )}
+                {screen === 'success' && (
+                    <SuccessScreen
+                        submissionCode={submissionCode}
+                        onNewRegistration={handleNewRegistration}
+                    />
+                )}
+            </div>
         </div>
     );
 }

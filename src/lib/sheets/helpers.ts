@@ -1,4 +1,5 @@
 import { getSheetsClient } from './client';
+import type { SubmissionRow, SubmissionItemRow } from '@/types';
 
 // ============================================================
 // Sheet tab names — constants
@@ -39,16 +40,34 @@ async function readRows(sheetName: string): Promise<string[][]> {
 // Submission helpers
 // ============================================================
 
-export async function appendSubmission(row: string[]) {
-    await appendRows(SHEET.SUBMISSIONS, [row]);
+const SUBMISSION_COLUMNS: (keyof SubmissionRow)[] = [
+    'submission_id', 'submission_code', 'created_at', 'updated_at', 'status',
+    'ceremony_type', 'ceremony_label',
+    'applicant_name', 'applicant_phone', 'applicant_dao_trang',
+    'total_items', 'categories_text', 'applicant_payload_json', 'source', 'notes',
+];
+
+const ITEM_COLUMNS: (keyof SubmissionItemRow)[] = [
+    'item_id', 'submission_id', 'item_index', 'category_key', 'category_label',
+    'created_at', 'updated_at', 'display_name', 'summary_text', 'subject_name',
+    'reference_value', 'item_payload_json', 'status',
+];
+
+export async function appendSubmission(row: SubmissionRow) {
+    const values = SUBMISSION_COLUMNS.map((col) => row[col] || '');
+    await appendRows(SHEET.SUBMISSIONS, [values]);
 }
 
-export async function appendSubmissionItems(rows: string[][]) {
-    await appendRows(SHEET.SUBMISSION_ITEMS, rows);
+export async function appendSubmissionItems(rows: SubmissionItemRow[]) {
+    const values = rows.map((row) =>
+        ITEM_COLUMNS.map((col) => row[col] || '')
+    );
+    await appendRows(SHEET.SUBMISSION_ITEMS, values);
 }
 
-export async function appendAuditLog(row: string[]) {
-    await appendRows(SHEET.AUDIT_LOGS, [row]);
+export async function appendAuditLog(row: { log_id: string; submission_id: string; action: string; created_at: string; detail: string }) {
+    const values = [row.log_id, row.submission_id, row.action, row.created_at, row.detail];
+    await appendRows(SHEET.AUDIT_LOGS, [values]);
 }
 
 // ============================================================
