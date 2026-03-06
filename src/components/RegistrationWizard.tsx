@@ -11,6 +11,7 @@ import LandingScreen from '@/components/screens/LandingScreen';
 import CeremonySelectScreen from '@/components/screens/CeremonySelectScreen';
 import ApplicantScreen from '@/components/screens/ApplicantScreen';
 import RegistrationFormScreen from '@/components/screens/RegistrationFormScreen';
+import LookupScreen, { type PastSubmission } from '@/components/screens/LookupScreen';
 import SummaryScreen from '@/components/screens/SummaryScreen';
 import SuccessScreen from '@/components/screens/SuccessScreen';
 import { Badge } from '@/components/ui/badge';
@@ -30,11 +31,10 @@ export default function RegistrationWizard() {
         if (typeof window !== 'undefined' && hasDraft()) {
             const draft = loadDraft();
             if (draft) {
-                const validScreens: ScreenName[] = ['landing', 'ceremony_select', 'applicant', 'registration_form', 'summary', 'success'];
+                const validScreens: ScreenName[] = ['landing', 'ceremony_select', 'applicant', 'registration_form', 'lookup', 'summary', 'success'];
                 const savedScreen = draft.currentScreen || 'landing';
 
                 if (!validScreens.includes(savedScreen)) {
-                    // Old draft with removed screen name — clear and start fresh
                     clearDraft();
                     return;
                 }
@@ -86,6 +86,69 @@ export default function RegistrationWizard() {
     const handleFormNext = (data: AllInOneFormData) => {
         setFormData(data);
         goTo('summary');
+    };
+
+    // Handle re-registration from lookup
+    const handleSelectPast = (sub: PastSubmission) => {
+        // Set ceremony type
+        const ct = sub.ceremonyType as CeremonyType;
+        setCeremonyType(ct);
+
+        // Set applicant
+        setApplicant({
+            tinChu: sub.applicantName,
+            phone: sub.applicantPhone,
+            daoTrang: '',
+            to: sub.applicantTo || '',
+            notes: '',
+        });
+
+        // Rebuild form data from items
+        const rebuilt: AllInOneFormData = {
+            hlTrong49: [],
+            hlNgoai49: [],
+            bai8_cungDuong: 'khong',
+            bai8_hlGiaTien: false,
+            bai8_hlTrenDat: false,
+            bai8_danhSachNghiep: [],
+            bai8_ghiChu: '',
+            tamLinhKhac: [],
+        };
+
+        for (const item of sub.itemsData) {
+            try {
+                const payload = item.payloadJson ? JSON.parse(item.payloadJson) : {};
+
+                if (item.categoryKey === 'hl_trong_49_ngay') {
+                    rebuilt.hlTrong49!.push({
+                        hoTen: payload.hoTen || item.displayName || '',
+                        ngayMat: payload.ngayMat || '',
+                        tho: payload.tho || '',
+                        anTangTai: payload.anTangTai || '',
+                    });
+                } else if (item.categoryKey === 'hl_ngoai_49_ro_ten') {
+                    rebuilt.hlNgoai49!.push({
+                        hoTen: payload.hoTen || item.displayName || '',
+                        ngayMat: payload.ngayMat || '',
+                        tho: payload.tho || '',
+                        anTangTai: payload.anTangTai || '',
+                    });
+                } else if (item.categoryKey === 'tam_linh_bai_8') {
+                    rebuilt.bai8_cungDuong = payload.cungDuong || 'khong';
+                    rebuilt.bai8_hlGiaTien = payload.hlGiaTien || false;
+                    rebuilt.bai8_hlTrenDat = payload.hlTrenDat || false;
+                    rebuilt.bai8_danhSachNghiep = (payload.danhSachNghiep || []).map((n: { moTa?: string }) => ({ moTa: n.moTa || '' }));
+                    rebuilt.bai8_ghiChu = payload.ghiChu || '';
+                } else if (item.categoryKey === 'tam_linh_khac') {
+                    rebuilt.tamLinhKhac!.push({ moTa: item.summaryText || payload.moTa || '' });
+                }
+            } catch {
+                // Skip malformed items
+            }
+        }
+
+        setFormData(rebuilt);
+        goTo('registration_form');
     };
 
     const handleSubmit = async () => {
@@ -147,7 +210,16 @@ export default function RegistrationWizard() {
                 )}
 
                 {screen === 'landing' && (
-                    <LandingScreen onStart={() => goTo('ceremony_select')} />
+                    <LandingScreen
+                        onStart={() => goTo('ceremony_select')}
+                        onLookup={() => goTo('lookup')}
+                    />
+                )}
+                {screen === 'lookup' && (
+                    <LookupScreen
+                        onSelectPast={handleSelectPast}
+                        onBack={() => goTo('landing')}
+                    />
                 )}
                 {screen === 'ceremony_select' && (
                     <CeremonySelectScreen
