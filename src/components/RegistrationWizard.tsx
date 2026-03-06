@@ -30,12 +30,18 @@ export default function RegistrationWizard() {
         if (typeof window !== 'undefined' && hasDraft()) {
             const draft = loadDraft();
             if (draft) {
+                const validScreens: ScreenName[] = ['landing', 'ceremony_select', 'applicant', 'registration_form', 'summary', 'success'];
+                const savedScreen = draft.currentScreen || 'landing';
+
+                if (!validScreens.includes(savedScreen)) {
+                    // Old draft with removed screen name — clear and start fresh
+                    clearDraft();
+                    return;
+                }
+
                 setCeremonyType(draft.ceremonyType);
                 setApplicant(draft.applicant);
-                if (draft.items && draft.items.length > 0) {
-                    // Legacy draft — ignore items, start fresh
-                }
-                setScreen(draft.currentScreen || 'landing');
+                setScreen(savedScreen);
                 setDraftLoaded(true);
             }
         }
