@@ -31,7 +31,9 @@ export default function DynamicFormScreen({ formType, formLabel, defaultValues, 
             for (const sec of s) {
                 for (const f of sec.fields) {
                     if (defaults[f.fieldKey] === undefined) {
-                        defaults[f.fieldKey] = f.fieldType === 'checkbox' ? false : '';
+                        if (f.fieldType === 'checkbox') defaults[f.fieldKey] = false;
+                        else if (f.fieldType === 'multichoice') defaults[f.fieldKey] = [];
+                        else defaults[f.fieldKey] = '';
                     }
                 }
             }
@@ -54,8 +56,12 @@ export default function DynamicFormScreen({ formType, formLabel, defaultValues, 
             for (const f of sec.fields) {
                 if (f.required) {
                     const val = formData[f.fieldKey];
-                    if (val === undefined || val === null || val === '') {
-                        newErrors[f.fieldKey] = `Vui lòng nhập ${f.fieldLabel}`;
+                    if (f.fieldType === 'multichoice') {
+                        if (!Array.isArray(val) || val.length === 0) {
+                            newErrors[f.fieldKey] = `Vui lòng chọn ít nhất 1 mục cho ${f.fieldLabel}`;
+                        }
+                    } else if (val === undefined || val === null || val === '') {
+                        newErrors[f.fieldKey] = `Vui lòng nhập/chọn ${f.fieldLabel}`;
                     }
                 }
             }
@@ -121,6 +127,29 @@ export default function DynamicFormScreen({ formType, formLabel, defaultValues, 
                         <span className="text-sm text-stone-700">{field.fieldLabel}</span>
                     </label>
                 );
+            case 'multichoice': {
+                const selectedList = (Array.isArray(value) ? value : []) as string[];
+                return (
+                    <div className="flex flex-col gap-2 mt-1">
+                        {field.options.map((opt) => (
+                            <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedList.includes(opt)}
+                                    onChange={(e) => {
+                                        let newList = [...selectedList];
+                                        if (e.target.checked) newList.push(opt);
+                                        else newList = newList.filter((i) => i !== opt);
+                                        handleChange(field.fieldKey, newList);
+                                    }}
+                                    className="w-4 h-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
+                                />
+                                <span className="text-sm text-stone-700">{opt}</span>
+                            </label>
+                        ))}
+                    </div>
+                );
+            }
             default:
                 return <Input value={(value as string) || ''} onChange={(e) => handleChange(field.fieldKey, e.target.value)} />;
         }

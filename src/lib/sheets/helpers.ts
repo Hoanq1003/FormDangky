@@ -210,6 +210,7 @@ export async function appendToFormSheet(
         const v = formData[k];
         if (v === true) return 'Có';
         if (v === false) return 'Không';
+        if (Array.isArray(v)) return v.join(', ');
         return String(v || '');
     });
 

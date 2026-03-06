@@ -37,7 +37,10 @@ export async function submitDynamicRegistration(payload: DynamicSubmitPayload): 
         // Add form fields as key-value pairs
         for (const [key, value] of Object.entries(formData)) {
             if (value === undefined || value === null || value === '' || value === false) continue;
-            if (value === true) {
+            if (Array.isArray(value)) {
+                if (value.length === 0) continue;
+                lines.push(`• ${key}: ${value.join(', ')}`);
+            } else if (value === true) {
                 lines.push(`• ${key}: Có`);
             } else {
                 lines.push(`• ${key}: ${String(value)}`);
@@ -73,8 +76,8 @@ export async function submitDynamicRegistration(payload: DynamicSubmitPayload): 
             updated_at: now,
             display_name: registrationLabel,
             summary_text: Object.entries(formData)
-                .filter(([, v]) => v && v !== false)
-                .map(([k, v]) => `${k}: ${v === true ? 'Có' : String(v).slice(0, 50)}`)
+                .filter(([, v]) => v !== undefined && v !== null && v !== '' && v !== false && !(Array.isArray(v) && v.length === 0))
+                .map(([k, v]) => `${k}: ${v === true ? 'Có' : Array.isArray(v) ? v.join(', ') : String(v).slice(0, 50)}`)
                 .join(' • '),
             subject_name: applicant.tinChu,
             reference_value: '',

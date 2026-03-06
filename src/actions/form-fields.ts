@@ -7,7 +7,7 @@ export interface FormFieldDef {
     section: string;
     fieldKey: string;
     fieldLabel: string;
-    fieldType: 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'repeatable';
+    fieldType: 'text' | 'textarea' | 'select' | 'checkbox' | 'number' | 'repeatable' | 'multichoice';
     required: boolean;
     placeholder: string;
     options: string[]; // for select
