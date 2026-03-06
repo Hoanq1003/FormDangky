@@ -26,13 +26,20 @@ interface LookupResult {
 
 export async function lookupByPhone(phone: string): Promise<LookupResult> {
     try {
-        const cleanPhone = phone.replace(/\s+/g, '').replace(/^\+84/, '0');
+        const normalizePhone = (p: string) => {
+            let clean = p.replace(/\s+/g, '').replace(/^'/, '').replace(/^\+84/, '0');
+            // If 9 digits (missing leading 0), add it back
+            if (/^\d{9}$/.test(clean)) clean = '0' + clean;
+            return clean;
+        };
+
+        const searchPhone = normalizePhone(phone);
         const allSubmissions = await listSubmissions();
         const allItems = await listSubmissionItems();
 
         const matched = allSubmissions.filter((s) => {
-            const sPhone = (s['Số điện thoại'] || s['applicant_phone'] || '').replace(/\s+/g, '').replace(/^\+84/, '0');
-            return sPhone === cleanPhone;
+            const sPhone = normalizePhone(s['Số điện thoại'] || s['applicant_phone'] || '');
+            return sPhone === searchPhone;
         });
 
         const submissions = matched.map((s) => {

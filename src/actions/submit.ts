@@ -225,7 +225,7 @@ export async function submitRegistration(payload: SubmitPayload): Promise<Submit
             String(stt),
             ceremony?.label || ceremonyType,
             applicant.tinChu,
-            applicant.phone,
+            "'" + applicant.phone,
             applicant.to || '',
             formattedText,
         ]);
