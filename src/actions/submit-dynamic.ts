@@ -117,13 +117,16 @@ export async function submitDynamicRegistration(payload: DynamicSubmitPayload): 
         // Write to per-form-type sheet (KQ_{label})
         try {
             const sections = await getFormFields(registrationType);
-            const fieldLabels: Record<string, string> = {};
+            const fieldConfigs: Record<string, { label: string; separateColumn: boolean }> = {};
             for (const sec of sections) {
                 for (const f of sec.fields) {
-                    fieldLabels[f.fieldKey] = f.fieldLabel;
+                    fieldConfigs[f.fieldKey] = {
+                        label: f.fieldLabel,
+                        separateColumn: f.separateColumn,
+                    };
                 }
             }
-            await appendToFormSheet(registrationLabel, applicant, formData, fieldLabels);
+            await appendToFormSheet(registrationLabel, applicant, formData, fieldConfigs);
         } catch (e) {
             console.error('appendToFormSheet error (non-fatal):', e);
         }

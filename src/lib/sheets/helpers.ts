@@ -147,15 +147,26 @@ export async function readSettings(): Promise<Record<string, string>> {
 /**
  * Writes a row to a sheet named after the form type label.
  * Auto-creates the sheet + headers if it doesn't exist.
+ * 
+ * fieldConfigs: key → { label, separateColumn }
+ *   - separateColumn=true → own column with header = label
+ *   - separateColumn=false → grouped into "Chi tiết" column
  */
 export async function appendToFormSheet(
     sheetLabel: string,
     applicant: { tinChu: string; phone: string; to?: string; notes?: string },
     formData: Record<string, unknown>,
-    fieldLabels: Record<string, string>,
+    fieldConfigs: Record<string, { label: string; separateColumn: boolean }>,
 ) {
     const { sheets, spreadsheetId } = await getSheetsClient();
-    const tabName = `KQ_${sheetLabel}`.slice(0, 50); // Sheet name max ~100 chars
+    const tabName = `KQ_${sheetLabel}`.slice(0, 50);
+
+    // Split into separate-column fields and grouped fields
+    const allKeys = Object.keys(formData).filter(
+        (k) => formData[k] !== undefined && formData[k] !== null
+    );
+    const separateKeys = allKeys.filter((k) => fieldConfigs[k]?.separateColumn);
+    const groupedKeys = allKeys.filter((k) => !fieldConfigs[k]?.separateColumn);
 
     // Check if tab exists
     let tabExists = false;
@@ -166,16 +177,13 @@ export async function appendToFormSheet(
         );
     } catch { /* ignore */ }
 
-    // Build headers from field labels
-    const fixedHeaders = ['STT', 'Ngày gửi', 'Tín chủ', 'SĐT', 'Tổ', 'Ghi chú'];
-    const fieldKeys = Object.keys(formData).filter(
-        (k) => formData[k] !== undefined && formData[k] !== null
-    );
-    const fieldHeaders = fieldKeys.map((k) => fieldLabels[k] || k);
-    const allHeaders = [...fixedHeaders, ...fieldHeaders];
+    // Build headers
+    const fixedHeaders = ['STT', 'Ngày gửi', 'Tín chủ', 'SĐT', 'Tổ'];
+    const separateHeaders = separateKeys.map((k) => fieldConfigs[k]?.label || k);
+    const allHeaders = [...fixedHeaders, ...separateHeaders];
+    if (groupedKeys.length > 0) allHeaders.push('Chi tiết');
 
     if (!tabExists) {
-        // Create tab
         try {
             await sheets.spreadsheets.batchUpdate({
                 spreadsheetId,
@@ -183,9 +191,8 @@ export async function appendToFormSheet(
                     requests: [{ addSheet: { properties: { title: tabName } } }],
                 },
             });
-        } catch { /* tab may already exist in race condition */ }
+        } catch { /* race */ }
 
-        // Write headers
         await sheets.spreadsheets.values.update({
             spreadsheetId,
             range: `'${tabName}'!A1`,
@@ -194,7 +201,7 @@ export async function appendToFormSheet(
         });
     }
 
-    // Count existing rows for STT
+    // STT
     let stt = 1;
     try {
         const existing = await sheets.spreadsheets.values.get({
@@ -204,15 +211,31 @@ export async function appendToFormSheet(
         stt = Math.max((existing.data.values?.length || 1) - 1, 0) + 1;
     } catch { /* starts at 1 */ }
 
-    // Build row values
-    const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-    const fieldValues = fieldKeys.map((k) => {
-        const v = formData[k];
+    // Format value helper
+    const fmt = (v: unknown): string => {
         if (v === true) return 'Có';
         if (v === false) return 'Không';
         if (Array.isArray(v)) return v.join(', ');
         return String(v || '');
-    });
+    };
+
+    // Build row
+    const now = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const separateValues = separateKeys.map((k) => fmt(formData[k]));
+
+    // Grouped "Chi tiết" column
+    let groupedText = '';
+    if (groupedKeys.length > 0) {
+        groupedText = groupedKeys
+            .filter((k) => {
+                const v = formData[k];
+                if (v === false || v === '' || v === null || v === undefined) return false;
+                if (Array.isArray(v) && v.length === 0) return false;
+                return true;
+            })
+            .map((k) => `${fieldConfigs[k]?.label || k}: ${fmt(formData[k])}`)
+            .join('\n');
+    }
 
     const row = [
         String(stt),
@@ -220,9 +243,9 @@ export async function appendToFormSheet(
         applicant.tinChu,
         "'" + applicant.phone,
         applicant.to || '',
-        applicant.notes || '',
-        ...fieldValues,
+        ...separateValues,
     ];
+    if (groupedKeys.length > 0) row.push(groupedText);
 
     await sheets.spreadsheets.values.append({
         spreadsheetId,
@@ -232,3 +255,4 @@ export async function appendToFormSheet(
         requestBody: { values: [row] },
     });
 }
+

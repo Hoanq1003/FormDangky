@@ -13,6 +13,7 @@ export interface FormFieldDef {
     options: string[]; // for select
     order: number;
     helperText: string;
+    separateColumn: boolean; // TRUE = own column in result sheet, FALSE = grouped
 }
 
 export interface FormSection {
@@ -25,7 +26,7 @@ export async function getFormFields(formType: string): Promise<FormSection[]> {
         const { sheets, spreadsheetId } = await getSheetsClient();
         const res = await sheets.spreadsheets.values.get({
             spreadsheetId,
-            range: "'form_fields'!A:J",
+            range: "'form_fields'!A:K",
         });
         const rows = (res.data.values as string[][]) || [];
         if (rows.length < 2) return [];
@@ -43,6 +44,7 @@ export async function getFormFields(formType: string): Promise<FormSection[]> {
                 options: row[7] ? row[7].split('|').map((o) => o.trim()) : [],
                 order: parseInt(row[8] || '99', 10),
                 helperText: row[9] || '',
+                separateColumn: (row[10] || 'FALSE').toUpperCase() === 'TRUE',
             }))
             .filter((f) => f.fieldKey)
             .sort((a, b) => a.order - b.order);
